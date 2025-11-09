@@ -1,0 +1,89 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { products } from "../data/products";
+import ProductCard from "../components/ProductCard.astro";
+---
+<BaseLayout title="Astro Shop">
+  <h1>Featured Products</h1>
+  <p class="muted">A minimal Astro e-commerce demo with a local cart.</p>
+  <div class="card" style="margin:1rem 0">
+    <div class="content" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end">
+      <label style="max-width:220px; flex:1">
+        Sort
+        <select id="sort-select">
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="name-desc">Name (Z–A)</option>
+          <option value="price-asc">Price (Low → High)</option>
+          <option value="price-desc">Price (High → Low)</option>
+        </select>
+      </label>
+      <label style="max-width:220px; flex:1">
+        Category
+        <select id="category-select">
+          <option value="all">All</option>
+          {[...new Set(products.map(p => p.category))].map((c) => (<option value={c}>{c}</option>))}
+        </select>
+      </label>
+      <label style="display:flex; align-items:center; gap:8px">
+        <input type="checkbox" id="favorites-only" /> Favorites only
+      </label>
+    </div>
+  </div>
+  <section class="grid" aria-label="Product grid">
+    {products.map((p) => (
+      <ProductCard product={p} />
+    ))}
+  </section>
+  <script>
+    function safeParse(val) { try { return JSON.parse(val); } catch { return null; } }
+    function getWishlistKey() {
+      const u = safeParse(localStorage.getItem('user'));
+      return u ? `wishlist:${u.email}` : 'wishlist';
+    }
+    function getWishlist() { return safeParse(localStorage.getItem(getWishlistKey())) || []; }
+    function applyFilters() {
+      const sortEl = document.getElementById('sort-select');
+      const categoryEl = document.getElementById('category-select');
+      const favEl = document.getElementById('favorites-only');
+      const grid = document.querySelector('.grid');
+      if (!sortEl || !categoryEl || !favEl || !grid) return;
+      const sort = (sortEl as HTMLSelectElement).value;
+      const category = (categoryEl as HTMLSelectElement).value;
+      const favOnly = (favEl as HTMLInputElement).checked;
+      const wishlist = (getWishlist() as Array<{slug:string}>).map(i => i.slug);
+      const cards = Array.from((grid as HTMLElement).querySelectorAll('.card')) as HTMLElement[];
+
+      // Filter
+      cards.forEach((card) => {
+        const slug = card.getAttribute('data-slug') || '';
+        const cat = card.getAttribute('data-category') || '';
+        const showByCat = category === 'all' || cat === category;
+        const showByFav = !favOnly || wishlist.includes(slug);
+        const show = showByCat && showByFav;
+        (card as HTMLElement).style.display = show ? '' : 'none';
+      });
+
+      // Sort visible cards
+      const visible = cards.filter(c => c.style.display !== 'none');
+      const getNum = (el, name) => Number(el.getAttribute(name));
+      const getStr = (el, name) => (el.getAttribute(name)||'').toLowerCase();
+      visible.sort((a,b) => {
+        switch (sort) {
+          case 'name-asc': return getStr(a,'data-name').localeCompare(getStr(b,'data-name'));
+          case 'name-desc': return getStr(b,'data-name').localeCompare(getStr(a,'data-name'));
+          case 'price-asc': return getNum(a,'data-price') - getNum(b,'data-price');
+          case 'price-desc': return getNum(b,'data-price') - getNum(a,'data-price');
+        }
+        return 0;
+      });
+      visible.forEach(el => (grid as HTMLElement).appendChild(el));
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      applyFilters();
+      (document.getElementById('sort-select') as HTMLElement)?.addEventListener('change', applyFilters);
+      (document.getElementById('category-select') as HTMLElement)?.addEventListener('change', applyFilters);
+      (document.getElementById('favorites-only') as HTMLElement)?.addEventListener('change', applyFilters);
+      window.addEventListener('storage', (e) => { if ((e.key||'').startsWith('wishlist')) applyFilters(); });
+    });
+  </script>
+</BaseLayout>

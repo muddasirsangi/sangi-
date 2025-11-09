@@ -1,0 +1,43 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Login · Sangi Store">
+  <div class="auth-center">
+    <h1 style="margin:0">Login</h1>
+    <p class="muted">Sign in to save your cart and view orders.</p>
+
+    <form id="login-form" class="card form-card">
+      <div class="content">
+        <label>Email<input type="email" id="email" required /></label>
+        <label style="margin-top:12px;">Password<input type="password" id="password" required /></label>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn" type="submit">Login</button>
+          <a class="btn" href="/register">Create account</a>
+        </div>
+        <p id="login-msg" class="muted" style="margin-top:8px;"></p>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function getUsers() { try { return JSON.parse(localStorage.getItem('users')) || []; } catch { return []; } }
+    function setUserSession(user) { localStorage.setItem('user', JSON.stringify(user)); }
+    function findUser(email) { return getUsers().find(u => u.email === email); }
+
+    document.getElementById('login-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = (document.getElementById('email') as HTMLInputElement).value.trim().toLowerCase();
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+      const msg = document.getElementById('login-msg');
+      const user = findUser(email);
+      if (!user || user.password !== password) {
+        if (msg) msg.textContent = 'Invalid credentials. Please try again.';
+        return;
+      }
+      setUserSession({ email: user.email, name: user.name });
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next') || '/account';
+      location.href = next;
+    });
+  </script>
+</BaseLayout>

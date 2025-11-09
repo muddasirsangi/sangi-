@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Register · Sangi Store">
+  <div class="auth-center">
+    <h1 style="margin:0">Create Account</h1>
+    <p class="muted">Register to save carts and view your orders.</p>
+
+    <form id="register-form" class="card form-card">
+      <div class="content">
+        <label>Name<input type="text" id="name" required /></label>
+        <label style="margin-top:12px;">Email<input type="email" id="email" required /></label>
+        <label style="margin-top:12px;">Password<input type="password" id="password" required minlength="4" /></label>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn" type="submit">Register</button>
+          <a class="btn" href="/login">Already have an account</a>
+        </div>
+        <p id="register-msg" class="muted" style="margin-top:8px;"></p>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function getUsers() { try { return JSON.parse(localStorage.getItem('users')) || []; } catch { return []; } }
+    function setUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
+    function setUserSession(user) { localStorage.setItem('user', JSON.stringify(user)); }
+
+    document.getElementById('register-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = (document.getElementById('name') as HTMLInputElement).value.trim();
+      const email = (document.getElementById('email') as HTMLInputElement).value.trim().toLowerCase();
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+      const msg = document.getElementById('register-msg');
+      const users = getUsers();
+      if (users.find(u => u.email === email)) {
+        if (msg) msg.textContent = 'Email already registered. Please login instead.';
+        return;
+      }
+      users.push({ name, email, password, addresses: [] });
+      setUsers(users);
+      setUserSession({ email, name });
+      location.href = '/account';
+    });
+  </script>
+</BaseLayout>

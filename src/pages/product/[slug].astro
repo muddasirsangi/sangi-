@@ -1,0 +1,171 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { products } from "../../data/products";
+
+export function getStaticPaths() {
+  return products.map((p) => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+const product = products.find((p) => p.slug === slug);
+if (!product) {
+  throw new Error(`Product not found: ${slug}`);
+}
+---
+<BaseLayout title={`${product.name} · Sangi Store`}>
+  <div class="card">
+    <img src={product.img} alt={product.name} />
+    <div class="content">
+      <h1 style="margin:0">{product.name}</h1>
+      <p class="muted">{product.desc}</p>
+      <div style="margin:6px 0"><span class="pill">{product.category}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div class="price">${product.price.toFixed(2)}</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="icon-btn heart" aria-label="Save to wishlist" data-slug={product.slug} onclick={`toggleWishlist('${product.slug}', '${product.name}', '${product.img}')`}>♡</button>
+          <button class="btn primary" onclick={`addToCart('${product.slug}','${product.name}',${product.price}, '${product.img}')`}>Add to Cart</button>
+          <a class="btn" href="/cart">Go to Cart</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="card" style="margin-top:1.5rem">
+    <div class="content">
+      <h2 style="margin-top:0">Reviews & Ratings</h2>
+      <div id="rating-summary" class="muted">Loading rating...</div>
+
+      <div id="reviews-list" style="margin-top:12px"></div>
+
+      <div id="review-form" style="margin-top:16px">
+        <h3 style="margin:0 0 8px">Write a review</h3>
+        <div id="review-login-hint" class="muted" style="display:none">Please <a href="/login">login</a> to post a review.</div>
+        <form id="new-review" style="display:none">
+          <label>Rating
+            <select name="rating">
+              <option value="5">5 - Excellent</option>
+              <option value="4">4 - Good</option>
+              <option value="3">3 - Average</option>
+              <option value="2">2 - Poor</option>
+              <option value="1">1 - Bad</option>
+            </select>
+          </label>
+          <label>Review
+            <textarea name="text" rows="4" placeholder="Share your thoughts..."></textarea>
+          </label>
+          <button class="btn primary" type="submit">Submit Review</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    type CartItem = { slug: string; name: string; price: number; img: string; qty: number };
+    type WishlistItem = { slug: string; name: string; img: string; addedAt: number };
+    type Review = { rating: number; text: string; userEmail?: string; userName?: string; createdAt: number };
+    function addToCart(slug: string, name: string, price: number, img: string) {
+      function safeParse<T = any>(val: string | null): T | null { try { return JSON.parse(val as string); } catch { return null; } }
+      const user = safeParse(localStorage.getItem('user'));
+      const key = user ? `cart:${user.email}` : 'cart';
+      let cart: CartItem[] = safeParse<CartItem[]>(localStorage.getItem(key)) || [];
+      const found = cart.find((i: CartItem) => i.slug === slug);
+      if (found) { found.qty = (found.qty || 0) + 1; }
+      else { cart.push({ slug, name, price, img, qty: 1 }); }
+      localStorage.setItem(key, JSON.stringify(cart));
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: JSON.stringify(cart) }));
+    if (window.notify) window.notify('Added to cart');
+
+      // Analytics: track add to cart
+      const a = safeParse(localStorage.getItem('analytics')) || { addToCart: {} };
+      a.addToCart = a.addToCart || {};
+      a.addToCart[slug] = (a.addToCart[slug] || 0) + 1;
+      localStorage.setItem('analytics', JSON.stringify(a));
+    }
+
+    function wishlistKey(): string {
+      try {
+        const u = JSON.parse(localStorage.getItem('user')||'null');
+        return u ? `wishlist:${u.email}` : 'wishlist';
+      } catch { return 'wishlist'; }
+    }
+    function getWishlist(): WishlistItem[] {
+      try { return JSON.parse(localStorage.getItem(wishlistKey())||'[]'); } catch { return []; }
+    }
+    function setWishlist(list: WishlistItem[]) { localStorage.setItem(wishlistKey(), JSON.stringify(list)); }
+    function toggleWishlist(slug: string, name: string, img: string) {
+      const list = getWishlist();
+      const idx = list.findIndex((i: WishlistItem) => i.slug === slug);
+      if (idx >= 0) list.splice(idx, 1); else list.push({ slug, name, img, addedAt: Date.now() });
+      setWishlist(list);
+      const btn = document.querySelector(`.icon-btn.heart[data-slug="${slug}"]`);
+      if (btn) {
+        const active = idx < 0;
+        btn.classList.toggle('active', active);
+        btn.textContent = active ? '♥' : '♡';
+      }
+      if (window.notify) window.notify(idx < 0 ? 'Added to favorites' : 'Removed from favorites');
+    }
+
+    // Reviews
+    function reviewsKey(slug: string) { return `reviews:${slug}`; }
+    function getReviews(slug: string): Review[] { try { return JSON.parse(localStorage.getItem(reviewsKey(slug))||'[]'); } catch { return []; } }
+    function setReviews(slug: string, list: Review[]) { localStorage.setItem(reviewsKey(slug), JSON.stringify(list)); }
+    function renderReviews(slug: string) {
+      const list = getReviews(slug);
+      const container = document.getElementById('reviews-list');
+      const summary = document.getElementById('rating-summary');
+      if (!container || !summary) return;
+      if (list.length === 0) {
+        summary.textContent = 'No ratings yet.';
+        container.innerHTML = '<p class="muted">Be the first to review!</p>';
+        return;
+      }
+      const avg = (list.reduce((a: number, r: Review) => a + Number(r.rating||0), 0) / list.length).toFixed(1);
+      summary.innerHTML = `Average rating: <strong>${avg} / 5</strong> (${list.length} reviews)`;
+      container.innerHTML = list.map((r: Review) => {
+        const stars = '★★★★★'.slice(0, Number(r.rating||0));
+        return `<div style="border-top:1px solid var(--glass-border); padding-top:8px; margin-top:8px;">
+          <div style="color:#ffd95a">${stars}</div>
+          <div class="muted" style="font-size:.9rem">by ${r.userName || r.userEmail || 'Anonymous'} · ${new Date(r.createdAt).toLocaleString()}</div>
+          <div>${(r.text||'').replace(/</g,'&lt;')}</div>
+        </div>`;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Init wishlist heart state
+      const list = getWishlist();
+      const btn = document.querySelector('.icon-btn.heart');
+      const slug = btn?.getAttribute('data-slug') || '';
+      if (btn && slug) {
+        const active = !!list.find((i: WishlistItem) => i.slug === slug);
+        btn.classList.toggle('active', active);
+        btn.textContent = active ? '♥' : '♡';
+      }
+
+      // Setup review form visibility
+      const user = (function(){ try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
+      const formEl = document.getElementById('new-review') as HTMLFormElement | null;
+      const hint = document.getElementById('review-login-hint');
+      if (user) { formEl && (formEl.style.display = ''); hint?.style && (hint.style.display = 'none'); }
+      else { formEl && (formEl.style.display = 'none'); hint?.style && (hint.style.display = ''); }
+
+      // Render existing reviews
+      renderReviews('${product.slug}');
+
+      formEl?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(formEl);
+        const rating = Number(fd.get('rating')) || 5;
+        const text = String(fd.get('text')||'').trim();
+        const rev: Review = { rating, text, userEmail: user?.email, userName: user?.name, createdAt: Date.now() };
+        const current: Review[] = getReviews('${product.slug}');
+        current.push(rev);
+        setReviews('${product.slug}', current);
+        formEl.reset();
+        renderReviews('${product.slug}');
+        if (window.notify) window.notify('Review submitted');
+      });
+    });
+  </script>
+</BaseLayout>

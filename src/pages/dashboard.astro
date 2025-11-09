@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Analytics Dashboard · Sangi Store">
+  <h1>Analytics Dashboard</h1>
+  <p class="muted">Demo metrics collected locally in your browser.</p>
+
+  <section class="grid">
+    <div class="card"><div class="content">
+      <h2 style="margin:0">Visitors</h2>
+      <div id="visitors-total" class="price">0</div>
+      <div class="muted" id="unique-visitors">Unique: 0</div>
+    </div></div>
+
+    <div class="card"><div class="content">
+      <h2 style="margin:0">Sales</h2>
+      <div>Orders: <strong id="orders-count">0</strong></div>
+      <div>Revenue: <strong id="revenue-total">$0.00</strong></div>
+    </div></div>
+
+    <div class="card"><div class="content">
+      <h2 style="margin:0">Top Products</h2>
+      <div id="top-products" class="muted">No data yet.</div>
+    </div></div>
+  </section>
+
+  <section class="card" style="margin-top:1rem"><div class="content">
+    <h2 style="margin:0">Visits by Page</h2>
+    <div id="visits-by-path" class="muted">No data yet.</div>
+  </div></section>
+
+  <script>
+    function safeParse(val) { try { return JSON.parse(val); } catch { return null; } }
+    function format(n) { return `$${(Math.round(n * 100) / 100).toFixed(2)}`; }
+    function render() {
+      const a = safeParse(localStorage.getItem('analytics')) || {};
+      const visits = a.visits || { total: 0, byPath: {} };
+      const sales = a.sales || { orders: 0, revenue: 0, productSales: {} };
+      const visitors = a.visitors || {};
+
+      document.getElementById('visitors-total').textContent = String(visits.total || 0);
+      document.getElementById('unique-visitors').textContent = `Unique: ${Object.keys(visitors).length}`;
+      document.getElementById('orders-count').textContent = String(sales.orders || 0);
+      document.getElementById('revenue-total').textContent = format(sales.revenue || 0);
+
+      const ps = sales.productSales || {};
+      const top = Object.entries(ps).sort((a,b) => b[1]-a[1]).slice(0,5);
+      document.getElementById('top-products').innerHTML = top.length
+        ? top.map(([slug, qty]) => `<div>${slug}: <strong>${qty}</strong></div>`).join('')
+        : 'No data yet.';
+
+      const vp = visits.byPath || {};
+      const rows = Object.entries(vp).sort((a,b) => b[1]-a[1]).map(([p, c]) => `<div>${p}: <strong>${c}</strong></div>`).join('');
+      document.getElementById('visits-by-path').innerHTML = rows || 'No data yet.';
+    }
+    document.addEventListener('DOMContentLoaded', render);
+    window.addEventListener('storage', (e) => { if (e.key === 'analytics') render(); });
+  </script>
+</BaseLayout>

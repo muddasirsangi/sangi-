@@ -1,0 +1,56 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Your Account · Sangi Store">
+  <h1>Your Account</h1>
+  <p class="muted">Manage your profile and saved addresses.</p>
+
+  <div class="card" style="max-width:680px;margin:auto;">
+    <div class="content">
+      <div id="profile"></div>
+      <h3 style="margin-top:16px;">Addresses</h3>
+      <ul id="addresses" class="muted"></ul>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <a class="btn" href="/orders">View Orders</a>
+        <button id="logout" class="btn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function safeParse(val) { try { return JSON.parse(val); } catch { return null; } }
+    function getUser() { return safeParse(localStorage.getItem('user')); }
+    function getUsers() { return safeParse(localStorage.getItem('users')) || []; }
+
+    function protect() {
+      const user = getUser();
+      if (!user) {
+        location.href = '/login?next=' + encodeURIComponent(location.pathname);
+      }
+      return user;
+    }
+
+    function render() {
+      const user = protect();
+      if (!user) return;
+      const profile = document.getElementById('profile');
+      const addresses = document.getElementById('addresses');
+      const fullUser = getUsers().find(u => u.email === user.email) || { addresses: [] };
+      if (profile) profile.innerHTML = `<strong>${user.name}</strong><br/>${user.email}`;
+      if (addresses) {
+        if (fullUser.addresses?.length) {
+          addresses.innerHTML = fullUser.addresses.map(a => `<li>${a}</li>`).join('');
+          addresses.classList.remove('muted');
+        } else {
+          addresses.textContent = 'No addresses added yet.';
+          addresses.classList.add('muted');
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+      document.getElementById('logout')?.addEventListener('click', () => { localStorage.removeItem('user'); location.href = '/'; });
+    });
+  </script>
+</BaseLayout>

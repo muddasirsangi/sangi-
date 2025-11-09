@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Your Orders · Sangi Store">
+  <h1>Your Orders</h1>
+  <p class="muted">Past orders saved locally for demo purposes.</p>
+
+  <div id="orders-container" class="card" style="max-width:800px;margin:auto;">
+    <div class="content">
+      <div id="orders-list">Loading orders...</div>
+    </div>
+  </div>
+
+  <script>
+    function safeParse(val) { try { return JSON.parse(val); } catch { return null; } }
+    function getUser() { return safeParse(localStorage.getItem('user')); }
+    function ordersKey(email) { return `orders:${email}`; }
+
+    function protect() {
+      const user = getUser();
+      if (!user) {
+        location.href = '/login?next=' + encodeURIComponent(location.pathname);
+      }
+      return user;
+    }
+
+    function render() {
+      const user = protect();
+      if (!user) return;
+      const listEl = document.getElementById('orders-list');
+      const orders = safeParse(localStorage.getItem(ordersKey(user.email))) || [];
+      if (!listEl) return;
+      if (orders.length === 0) {
+        listEl.textContent = 'No orders yet.';
+        listEl.classList.add('muted');
+        return;
+      }
+      listEl.classList.remove('muted');
+      listEl.innerHTML = orders.map((o, idx) => {
+        const total = o.items.reduce((a, i) => a + i.price * i.qty, 0);
+        const date = new Date(o.createdAt).toLocaleString();
+        return `
+          <div class="card" style="margin-bottom:12px;">
+            <div class="content">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong>Order #${idx + 1}</strong>
+                <span class="muted">${date}</span>
+              </div>
+              <ul style="margin-top:8px;">
+                ${o.items.map(i => `<li>${i.name} × ${i.qty} — $${i.price.toFixed(2)}</li>`).join('')}
+              </ul>
+              <div style="text-align:right; margin-top:8px;">Total: <strong>$${total.toFixed(2)}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
+  </script>
+</BaseLayout>

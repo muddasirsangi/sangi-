@@ -1,0 +1,206 @@
+---
+const { title = 'Sangi Store' } = Astro.props;
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <header>
+      <a class="logo" href="/">Sangi Store</a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/cart">Cart (<span id="cart-count">0</span>)</a>
+        <form id="search-form" action="/search" method="get" style="display:inline-flex;align-items:center;gap:8px;margin-left:8px">
+          <input class="search-input" type="search" name="q" placeholder="Search products" value="" />
+          <button class="btn" type="submit">Search</button>
+        </form>
+        <a id="login-link" href="/login">Login</a>
+        <a id="register-link" href="/register" style="margin-left:8px;">Register</a>
+        <a id="account-link" href="/account" style="display:none;margin-left:8px;">Account</a>
+        <a id="orders-link" href="/orders" style="display:none;margin-left:8px;">Orders</a>
+        <a href="/dashboard" style="margin-left:8px;">Dashboard</a>
+        <button id="theme-toggle" class="theme-toggle" style="margin-left:8px">Toggle Theme</button>
+        <button id="logout-btn" class="btn" style="display:none;margin-left:8px;">Logout</button>
+      </nav>
+    </header>
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+    <main>
+      <slot />
+    </main>
+    <script>
+      function safeParse<T = any>(val: string | null): T | null { try { return JSON.parse(val as string); } catch { return null; } }
+      function getUser(): any { return safeParse<any>(localStorage.getItem('user')); }
+      function cartKey(): string { const u = getUser(); return u ? `cart:${u.email}` : 'cart'; }
+      function getCart(): any[] { return safeParse<any[]>(localStorage.getItem(cartKey())) || []; }
+      function countCart(): number { return getCart().reduce((a: number, i: any) => a + (i.qty || 0), 0); }
+
+      function updateCartCount() {
+        const el = document.getElementById('cart-count');
+        if (!el) return;
+        el.textContent = String(countCart());
+      }
+
+      function updateAuthLinks() {
+        const user = getUser();
+        const loginLink = document.getElementById('login-link');
+        const registerLink = document.getElementById('register-link');
+        const accountLink = document.getElementById('account-link');
+        const ordersLink = document.getElementById('orders-link');
+        const logoutBtn = document.getElementById('logout-btn');
+        if (user) {
+          if (loginLink) loginLink.style.display = 'none';
+          if (registerLink) registerLink.style.display = 'none';
+          if (accountLink) accountLink.style.display = '';
+          if (ordersLink) ordersLink.style.display = '';
+          if (logoutBtn) logoutBtn.style.display = '';
+          // first login intro
+          if (!localStorage.getItem('astro-shop-first-login')) {
+            localStorage.setItem('astro-shop-first-login', '1');
+            window.notify('🔮  New here? Browse crystals, incense & more—each item cleansed under moonlight before shipping.');
+          }
+        } else {
+          if (loginLink) loginLink.style.display = '';
+          if (registerLink) registerLink.style.display = '';
+          if (accountLink) accountLink.style.display = 'none';
+          if (ordersLink) ordersLink.style.display = 'none';
+          if (logoutBtn) logoutBtn.style.display = 'none';
+        }
+      }
+
+      function bindLogout() {
+        const btn = document.getElementById('logout-btn');
+        btn?.addEventListener('click', () => {
+          localStorage.removeItem('user');
+          updateAuthLinks();
+          updateCartCount();
+          location.href = '/';
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        updateAuthLinks();
+        updateCartCount();
+        bindLogout();
+        recordVisit();
+        hydrateSearch();
+        initTheme();
+        initRevealAnimations();
+        initToasts();
+        showWelcomeOnce();   // first-time visitor banner
+      });
+
+      window.addEventListener('storage', (e) => {
+        const keys = [ 'user', 'cart', cartKey() ];
+        if (keys.includes(e.key || '')) {
+          updateAuthLinks();
+          updateCartCount();
+        }
+      });
+
+      // ---- Analytics (demo) ----
+      function recordVisit() {
+        try {
+          // Basic visitor id
+          let vid = localStorage.getItem('visitorId');
+          if (!vid) {
+            vid = Math.random().toString(36).slice(2);
+            localStorage.setItem('visitorId', vid);
+          }
+          const a: any = safeParse<any>(localStorage.getItem('analytics')) || { visits: { total: 0, byPath: {} }, visitors: {} };
+          a.visits = a.visits || { total: 0, byPath: {} };
+          a.visitors = a.visitors || {};
+          const path = location.pathname;
+          a.visits.total = (a.visits.total || 0) + 1;
+          a.visits.byPath[path] = (a.visits.byPath[path] || 0) + 1;
+          a.visitors[vid] = true;
+          localStorage.setItem('analytics', JSON.stringify(a));
+        } catch {}
+      }
+
+      function hydrateSearch() {
+        try {
+          const params = new URLSearchParams(location.search);
+          const q = params.get('q') || '';
+          const input = document.querySelector('#search-form input[name="q"]') as HTMLInputElement | null;
+          if (input) input.value = q;
+        } catch {}
+      }
+
+      // ---- Theme ----
+      function applyTheme(theme: string) {
+        const body = document.body;
+        body.classList.toggle('theme-light', theme === 'light');
+      }
+      function initTheme() {
+        const saved = localStorage.getItem('theme') || 'dark';
+        applyTheme(saved);
+        document.getElementById('theme-toggle')?.addEventListener('click', () => {
+          const current = (localStorage.getItem('theme') || 'dark') === 'dark' ? 'light' : 'dark';
+          localStorage.setItem('theme', current);
+          applyTheme(current);
+        });
+      }
+
+      // ---- Animations (reveal on scroll) ----
+      function initRevealAnimations() {
+        const els = document.querySelectorAll('.reveal');
+        if (!('IntersectionObserver' in window)) {
+          els.forEach(el => el.classList.add('visible'));
+          return;
+        }
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1 });
+        els.forEach(el => io.observe(el));
+      }
+
+      // ---- Toasts ----
+      function initToasts() {
+        const container = document.getElementById('toast-container');
+        function pushToast(message: string) {
+          if (!container) return;
+          const el = document.createElement('div');
+          el.className = 'toast';
+          el.textContent = message;
+          container.appendChild(el);
+          setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 300ms ease';
+            setTimeout(() => el.remove(), 320);
+          }, 2000);
+        }
+        window.addEventListener('toast', (e: Event) => {
+          const msg = (e as CustomEvent<string>).detail || '';
+          pushToast(msg);
+        });
+        // @ts-ignore
+        window.notify = (msg) => pushToast(msg);
+      }
+
+      // ---- Welcome banner for new visitors ----
+      function showWelcomeOnce() {
+        const key = 'astro-shop-welcome';
+        if (localStorage.getItem(key)) return;          // already seen
+        localStorage.setItem(key, '1');
+        window.notify('✨  Welcome to Astro Shop! Discover spiritual tools to bring clarity, positive energy & cosmic balance into your life.');
+      }
+
+      // ---- Nicer purchase thank-you ----
+      function thankYou() {
+        window.notify('🌙  Thank you for choosing Astro Shop for your spiritual journey. Your trust means the universe to us!');
+      }
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,140 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+<BaseLayout title="Your Cart · Astro Shop">
+  <h1>Your Cart</h1>
+  <p class="muted">Items persist locally using your browser's storage.</p>
+
+  <div id="cart-container">
+    <div class="table-wrap">
+      <table class="cart-table" aria-label="Cart items">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Price</th>
+          <th>Qty</th>
+          <th>Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="cart-body">
+        <tr><td colspan="5" class="muted">Loading cart...</td></tr>
+      </tbody>
+      </table>
+    </div>
+    <div class="cart-total">
+      Total: <strong style="margin-left:8px" id="cart-total">$0.00</strong>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="btn" id="clear-cart">Clear Cart</button>
+      <button class="btn primary" id="checkout">Checkout (Demo)</button>
+    </div>
+  </div>
+
+  <script>
+    type CartItem = { slug: string; name: string; price: number; img: string; qty: number };
+    function safeParse<T = any>(val: string | null): T | null { try { return JSON.parse(val as string); } catch { return null; } }
+    function getUser(): any { return safeParse<any>(localStorage.getItem('user')); }
+    function cartKey(): string { const u = getUser(); return u ? `cart:${u.email}` : 'cart'; }
+    function getCart(): CartItem[] { return safeParse<CartItem[]>(localStorage.getItem(cartKey())) || []; }
+    function setCart(cart: CartItem[]) { localStorage.setItem(cartKey(), JSON.stringify(cart)); }
+    function ordersKey(email: string): string { return `orders:${email}`; }
+    function format(n: number): string { return `$${(Math.round(n * 100) / 100).toFixed(2)}`; }
+
+    function render() {
+      const cart = getCart();
+      const tbody = document.getElementById('cart-body');
+      const totalEl = document.getElementById('cart-total');
+      if (!tbody || !totalEl) return;
+
+      if (cart.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="muted">Your cart is empty.</td></tr>`;
+        totalEl.textContent = format(0);
+        return;
+      }
+
+      let total = 0;
+      tbody.innerHTML = cart.map((item, idx) => {
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+        return `
+          <tr>
+            <td>${item.name}</td>
+            <td>${format(item.price)}</td>
+            <td>
+              <input type="number" min="1" value="${item.qty}" data-idx="${idx}" class="qty" style="width:64px;" />
+            </td>
+            <td>${format(subtotal)}</td>
+            <td>
+              <button class="btn" data-idx="${idx}" data-action="remove">Remove</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      totalEl.textContent = format(total);
+    }
+
+    function onChange(e: Event) {
+      const t = e.target as HTMLElement;
+      if (t.matches('input.qty')) {
+        const idx = Number(t.getAttribute('data-idx'));
+        const cart = getCart();
+        const val = Math.max(1, Number((t as HTMLInputElement).value || 1));
+        cart[idx].qty = val;
+        setCart(cart);
+        render();
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cart', newValue: JSON.stringify(cart) }));
+      }
+      if (t.matches('button[data-action="remove"]')) {
+        const idx = Number(t.getAttribute('data-idx'));
+        const cart = getCart();
+        cart.splice(idx, 1);
+        setCart(cart);
+        render();
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cart', newValue: JSON.stringify(cart) }));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      render();
+      document.getElementById('cart-container')?.addEventListener('input', onChange);
+      document.getElementById('cart-container')?.addEventListener('click', onChange);
+      document.getElementById('clear-cart')?.addEventListener('click', () => { setCart([]); render(); window.dispatchEvent(new StorageEvent('storage', { key: cartKey(), newValue: '[]' })); });
+      document.getElementById('clear-cart')?.addEventListener('click', () => { setCart([]); render(); window.dispatchEvent(new StorageEvent('storage', { key: cartKey(), newValue: '[]' })); if (window.notify) window.notify('Cart cleared'); });
+      document.getElementById('checkout')?.addEventListener('click', () => {
+        const user = getUser();
+        const cart = getCart();
+        if (!user) {
+          if (window.notify) window.notify('Please login to checkout');
+          location.href = '/login?next=' + encodeURIComponent(location.pathname);
+          return;
+        }
+        if (cart.length === 0) { if (window.notify) window.notify('Your cart is empty'); return; }
+        const order = { items: cart, createdAt: Date.now() };
+        const existing = safeParse(localStorage.getItem(ordersKey(user.email))) || [];
+        existing.push(order);
+        localStorage.setItem(ordersKey(user.email), JSON.stringify(existing));
+        // ---- Analytics: record sales and product counts (demo) ----
+        try {
+          const a: any = safeParse<any>(localStorage.getItem('analytics')) || {};
+          a.sales = a.sales || { orders: 0, revenue: 0, productSales: {} };
+          a.sales.orders = (a.sales.orders || 0) + 1;
+          let orderTotal = 0;
+          cart.forEach((item: CartItem) => {
+            const subtotal = (item.price || 0) * (item.qty || 0);
+            orderTotal += subtotal;
+            const key = item.slug;
+            a.sales.productSales[key] = (a.sales.productSales[key] || 0) + (item.qty || 0);
+          });
+          a.sales.revenue = (a.sales.revenue || 0) + orderTotal;
+          localStorage.setItem('analytics', JSON.stringify(a));
+        } catch {}
+        setCart([]);
+        render();
+        if ((window as any).thankYou) (window as any).thankYou(); // prettier thank-you toast
+        location.href = '/orders';
+      });
+    });
+  </script>
+</BaseLayout>

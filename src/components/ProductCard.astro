@@ -1,0 +1,82 @@
+---
+import type { Product } from "../data/products";
+const { product } = Astro.props as { product: Product };
+---
+<article class="card reveal" data-slug={product.slug} data-name={product.name} data-price={product.price} data-category={product.category}>
+  <img src={product.img} alt={product.name} loading="lazy" />
+  <div class="content">
+    <div class="title">{product.name}</div>
+    <div class="muted">{product.desc}</div>
+    <div style="margin-top:6px"><span class="pill">{product.category}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+      <div class="price">${product.price.toFixed(2)}</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="icon-btn heart" aria-label="Save to wishlist" data-slug={product.slug} onclick={`toggleWishlist('${product.slug}', '${product.name}', '${product.img}')`}>♡</button>
+        <a class="btn" href={`/product/${product.slug}`}>View</a>
+        <button class="btn primary" onclick={`addToCart('${product.slug}', '${product.name}', ${product.price}, '${product.img}')`}>Add to Cart</button>
+      </div>
+    </div>
+  </div>
+</article>
+
+<script>
+  type CartItem = { slug: string; name: string; price: number; img: string; qty: number };
+  type WishlistItem = { slug: string; name: string; img: string; addedAt: number };
+  function addToCart(slug: string, name: string, price: number, img: string) {
+    function safeParse<T = any>(val: string | null): T | null { try { return JSON.parse(val as string); } catch { return null; } }
+    const user = safeParse(localStorage.getItem('user'));
+    const key = user ? `cart:${user.email}` : 'cart';
+    let cart: CartItem[] = safeParse<CartItem[]>(localStorage.getItem(key)) || [];
+    const found = cart.find((i: CartItem) => i.slug === slug);
+    if (found) { found.qty = (found.qty || 0) + 1; }
+    else { cart.push({ slug, name, price, img, qty: 1 }); }
+    localStorage.setItem(key, JSON.stringify(cart));
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue: JSON.stringify(cart) }));
+    if (window.notify) window.notify('Added to cart');
+
+    // Analytics: track add to cart count
+    const a = safeParse(localStorage.getItem('analytics')) || { addToCart: {} };
+    a.addToCart = a.addToCart || {};
+    a.addToCart[slug] = (a.addToCart[slug] || 0) + 1;
+    localStorage.setItem('analytics', JSON.stringify(a));
+  }
+
+  function wishlistKey(): string {
+    try {
+      const u = JSON.parse(localStorage.getItem('user')||'null');
+      return u ? `wishlist:${u.email}` : 'wishlist';
+    } catch { return 'wishlist'; }
+  }
+  function getWishlist(): WishlistItem[] {
+    try { return JSON.parse(localStorage.getItem(wishlistKey())||'[]'); } catch { return []; }
+  }
+  function setWishlist(list: WishlistItem[]) {
+    localStorage.setItem(wishlistKey(), JSON.stringify(list));
+  }
+  function toggleWishlist(slug: string, name: string, img: string) {
+    const list = getWishlist();
+    const idx = list.findIndex((i: WishlistItem) => i.slug === slug);
+    if (idx >= 0) list.splice(idx, 1);
+    else list.push({ slug, name, img, addedAt: Date.now() });
+    setWishlist(list);
+    // Update button state
+    const btns = document.querySelectorAll(`.icon-btn.heart[data-slug="${slug}"]`);
+    btns.forEach((b) => {
+      const active = idx < 0;
+      b.classList.toggle('active', active);
+      b.textContent = active ? '♥' : '♡';
+    });
+    if (window.notify) window.notify(idx < 0 ? 'Added to favorites' : 'Removed from favorites');
+  }
+
+  // Initialize heart state when cards mount
+  document.addEventListener('DOMContentLoaded', () => {
+    const list = getWishlist();
+    document.querySelectorAll('.icon-btn.heart').forEach((b) => {
+      const slug = b.getAttribute('data-slug') || '';
+      const active = !!list.find((i: WishlistItem) => i.slug === slug);
+      b.classList.toggle('active', active);
+      b.textContent = active ? '♥' : '♡';
+    });
+  });
+</script>

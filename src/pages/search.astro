@@ -1,0 +1,64 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { products } from "../data/products";
+const q = (Astro.url.searchParams.get('q') || '').trim();
+const term = q.toLowerCase();
+const results = term ? products.filter(p => (
+  p.name.toLowerCase().includes(term) ||
+  p.desc.toLowerCase().includes(term) ||
+  p.slug.toLowerCase().includes(term)
+)) : [];
+---
+<BaseLayout title={`Search · ${q || 'All'}`}>
+  <h1>Search</h1>
+  <p class="muted">Type in the header search to find products.</p>
+  {q && (<p>Results for <strong>{q}</strong>: {results.length}</p>)}
+  <div class="card" style="margin:1rem 0">
+    <div class="content" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end">
+      <label style="max-width:220px; flex:1">
+        Sort
+        <select id="sort-select">
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="name-desc">Name (Z–A)</option>
+          <option value="price-asc">Price (Low → High)</option>
+          <option value="price-desc">Price (High → Low)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <section class="grid" aria-label="Search results">
+    {results.map((p) => (
+      <Fragment>
+        <import ProductCard from "../components/ProductCard.astro" />
+        <ProductCard product={p} />
+      </Fragment>
+    ))}
+  </section>
+  {!q && (
+    <p class="muted">No query entered. Try searching for a product name.</p>
+  )}
+  <script>
+    function sortCards() {
+      const sortEl = document.getElementById('sort-select') as HTMLSelectElement | null;
+      const grid = document.querySelector('.grid') as HTMLElement | null;
+      if (!sortEl || !grid) return;
+      const sort = sortEl.value;
+      const cards = Array.from(grid.querySelectorAll('.card')) as HTMLElement[];
+      const getNum = (el: HTMLElement, name: string) => Number(el.getAttribute(name));
+      const getStr = (el: HTMLElement, name: string) => (el.getAttribute(name)||'').toLowerCase();
+      cards.sort((a, b) => {
+        switch (sort) {
+          case 'name-asc': return getStr(a,'data-name').localeCompare(getStr(b,'data-name'));
+          case 'name-desc': return getStr(b,'data-name').localeCompare(getStr(a,'data-name'));
+          case 'price-asc': return getNum(a,'data-price') - getNum(b,'data-price');
+          case 'price-desc': return getNum(b,'data-price') - getNum(a,'data-price');
+        }
+        return 0;
+      });
+      cards.forEach(el => grid.appendChild(el));
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      (document.getElementById('sort-select') as HTMLElement)?.addEventListener('change', sortCards);
+    });
+  </script>
+</BaseLayout>
