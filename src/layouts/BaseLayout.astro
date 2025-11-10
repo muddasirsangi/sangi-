@@ -16,6 +16,7 @@ const { title = 'Sangi Store' } = Astro.props;
       <a class="logo" href="/">Sangi Store</a>
       <nav>
         <a href="/">Home</a>
+        <a href="/services">Services</a>
         <a href="/cart">Cart (<span id="cart-count">0</span>)</a>
         <form id="search-form" action="/search" method="get" style="display:inline-flex;align-items:center;gap:8px;margin-left:8px">
           <input class="search-input" type="search" name="q" placeholder="Search products" value="" />
@@ -27,6 +28,7 @@ const { title = 'Sangi Store' } = Astro.props;
         <a id="orders-link" href="/orders" style="display:none;margin-left:8px;">Orders</a>
         <a href="/dashboard" style="margin-left:8px;">Dashboard</a>
         <button id="theme-toggle" class="theme-toggle" style="margin-left:8px">Toggle Theme</button>
+        <button id="accent-toggle" class="theme-toggle" style="margin-left:8px">Toggle Color</button>
         <button id="logout-btn" class="btn" style="display:none;margin-left:8px;">Logout</button>
       </nav>
     </header>
@@ -63,7 +65,7 @@ const { title = 'Sangi Store' } = Astro.props;
           // first login intro
           if (!localStorage.getItem('astro-shop-first-login')) {
             localStorage.setItem('astro-shop-first-login', '1');
-            window.notify('🔮  New here? Browse crystals, incense & more—each item cleansed under moonlight before shipping.');
+            if (window.notify) window.notify('🔮  New here? Browse crystals, incense & more—each item cleansed under moonlight before shipping.');
           }
         } else {
           if (loginLink) loginLink.style.display = '';
@@ -91,6 +93,7 @@ const { title = 'Sangi Store' } = Astro.props;
         recordVisit();
         hydrateSearch();
         initTheme();
+        initAccent();
         initRevealAnimations();
         initToasts();
         showWelcomeOnce();   // first-time visitor banner
@@ -139,12 +142,33 @@ const { title = 'Sangi Store' } = Astro.props;
         body.classList.toggle('theme-light', theme === 'light');
       }
       function initTheme() {
-        const saved = localStorage.getItem('theme') || 'dark';
+        const saved = localStorage.getItem('theme') || 'light';
         applyTheme(saved);
         document.getElementById('theme-toggle')?.addEventListener('click', () => {
-          const current = (localStorage.getItem('theme') || 'dark') === 'dark' ? 'light' : 'dark';
+          const current = (localStorage.getItem('theme') || 'light') === 'dark' ? 'light' : 'dark';
           localStorage.setItem('theme', current);
           applyTheme(current);
+        });
+      }
+
+      // ---- Accent color toggle ----
+      function applyAccent(mode: string) {
+        const body = document.body;
+        body.classList.remove('accent-blue', 'accent-gold');
+        body.classList.add(mode === 'gold' ? 'accent-gold' : 'accent-blue');
+        const root = document.documentElement;
+        root.classList.remove('accent-blue', 'accent-gold');
+        root.classList.add(mode === 'gold' ? 'accent-gold' : 'accent-blue');
+        const btn = document.getElementById('accent-toggle');
+        if (btn) btn.textContent = `Color: ${mode === 'gold' ? 'Gold' : 'Blue'}`;
+      }
+      function initAccent() {
+        const saved = localStorage.getItem('accent') || 'blue';
+        applyAccent(saved);
+        document.getElementById('accent-toggle')?.addEventListener('click', () => {
+          const current = (localStorage.getItem('accent') || 'blue') === 'gold' ? 'blue' : 'gold';
+          localStorage.setItem('accent', current);
+          applyAccent(current);
         });
       }
 
@@ -194,12 +218,12 @@ const { title = 'Sangi Store' } = Astro.props;
         const key = 'astro-shop-welcome';
         if (localStorage.getItem(key)) return;          // already seen
         localStorage.setItem(key, '1');
-        window.notify('✨  Welcome to Astro Shop! Discover spiritual tools to bring clarity, positive energy & cosmic balance into your life.');
+        if (window.notify) window.notify('✨  Welcome to Astro Shop! Discover spiritual tools to bring clarity, positive energy & cosmic balance into your life.');
       }
 
       // ---- Nicer purchase thank-you ----
       function thankYou() {
-        window.notify('🌙  Thank you for choosing Astro Shop for your spiritual journey. Your trust means the universe to us!');
+        if (window.notify) window.notify('🌙  Thank you for choosing Astro Shop for your spiritual journey. Your trust means the universe to us!');
       }
     </script>
   </body>

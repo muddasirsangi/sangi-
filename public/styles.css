@@ -6,6 +6,9 @@
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
   --muted: #9ca3af;
+  --header-bg: rgba(26, 26, 26, 0.7);
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --focus-ring: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 /* Light theme overrides */
@@ -17,6 +20,32 @@
   --glass-bg: rgba(0, 0, 0, 0.05);
   --glass-border: rgba(17, 24, 39, 0.12);
   --muted: #6b7280;
+  --header-bg: rgba(255, 255, 255, 0.75);
+  --input-bg: #ffffff;
+}
+
+/* Accent palettes (apply to body) */
+body.accent-blue {
+  --accent: #2563eb;
+  --accent-dark: #1e40af;
+  --focus-ring: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+body.accent-gold {
+  --accent: #f59e0b;
+  --accent-dark: #b45309;
+  --focus-ring: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Accent palettes on root for stronger precedence */
+:root.accent-blue {
+  --accent: #2563eb;
+  --accent-dark: #1e40af;
+  --focus-ring: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+:root.accent-gold {
+  --accent: #f59e0b;
+  --accent-dark: #b45309;
+  --focus-ring: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 * { box-sizing: border-box; }
@@ -38,7 +67,7 @@ header {
   padding: 16px 24px;
   position: sticky;
   top: 0;
-  background: rgba(26, 26, 26, 0.8);
+  background: var(--header-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--glass-border);
@@ -130,13 +159,13 @@ input, select, textarea {
   margin-top: 6px;
   border-radius: 0.6rem;
   border: 1px solid var(--glass-border);
-  background: rgba(255,255,255,0.06);
+  background: var(--input-bg);
   color: var(--text);
 }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(255,153,0,0.25);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* Header search */

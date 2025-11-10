@@ -7,6 +7,16 @@ const { product } = Astro.props as { product: Product };
   <div class="content">
     <div class="title">{product.name}</div>
     <div class="muted">{product.desc}</div>
+    {product.rating && (
+      <div class="stars" aria-label={`Rating: ${product.rating} out of 5`}>
+        {[...Array(5)].map((_, i) => (
+          <svg class={i < Math.floor(product.rating!) ? 'filled' : 'empty'} viewBox="0 0 24 24">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+          </svg>
+        ))}
+        <span class="rating-val">{product.rating.toFixed(1)}</span>
+      </div>
+    )}
     <div style="margin-top:6px"><span class="pill">{product.category}</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
       <div class="price">${product.price.toFixed(2)}</div>
@@ -80,3 +90,25 @@ const { product } = Astro.props as { product: Product };
     });
   });
 </script>
+
+<style>
+  .stars {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .stars svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--star-empty, #d1d5db);
+  }
+  .stars svg.filled {
+    fill: var(--accent);
+  }
+  .rating-val {
+    margin-left: 6px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
