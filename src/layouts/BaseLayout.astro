@@ -1,5 +1,5 @@
 ---
-const { title = 'Sangi Store' } = Astro.props;
+const { title = 'Sangi Store', hideHeader = false } = Astro.props as { title?: string; hideHeader?: boolean };
 ---
 <html lang="en">
   <head>
@@ -12,26 +12,27 @@ const { title = 'Sangi Store' } = Astro.props;
     <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap" rel="stylesheet">
   </head>
   <body>
-    <header>
+    { !hideHeader && (
+    <header class="site-header">
       <a class="logo" href="/">Sangi Store</a>
-      <nav>
-        <a href="/">Home</a>
-        <a href="/services">Services</a>
-        <a href="/cart">Cart (<span id="cart-count">0</span>)</a>
+      <nav class="site-nav">
+        <a class="nav-link" href="/">Home</a>
+        <a class="nav-link" href="/services">Services</a>
+        <a class="nav-link" href="/cart">Cart (<span id="cart-count">0</span>)</a>
         <form id="search-form" action="/search" method="get" style="display:inline-flex;align-items:center;gap:8px;margin-left:8px">
           <input class="search-input" type="search" name="q" placeholder="Search products" value="" />
           <button class="btn" type="submit">Search</button>
         </form>
-        <a id="login-link" href="/login">Login</a>
-        <a id="register-link" href="/register" style="margin-left:8px;">Register</a>
-        <a id="account-link" href="/account" style="display:none;margin-left:8px;">Account</a>
-        <a id="orders-link" href="/orders" style="display:none;margin-left:8px;">Orders</a>
-        <a href="/dashboard" style="margin-left:8px;">Dashboard</a>
-        <button id="theme-toggle" class="theme-toggle" style="margin-left:8px">Toggle Theme</button>
-        <button id="accent-toggle" class="theme-toggle" style="margin-left:8px">Toggle Color</button>
+        <a class="nav-link" id="login-link" href="/login">Login</a>
+        <a class="nav-link" id="register-link" href="/register" style="margin-left:8px;">Register</a>
+        <a class="nav-link" id="account-link" href="/account" style="display:none;margin-left:8px;">Account</a>
+        <a class="nav-link" id="orders-link" href="/orders" style="display:none;margin-left:8px;">Orders</a>
+        <a class="nav-link" href="/dashboard" style="margin-left:8px;">Dashboard</a>
+        <ThemeToggle />
         <button id="logout-btn" class="btn" style="display:none;margin-left:8px;">Logout</button>
       </nav>
     </header>
+    ) }
     <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
     <main>
       <slot />

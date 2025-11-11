@@ -1,0 +1,69 @@
+---
+const {
+  title = 'REVOLUTIONIZED.',
+  subtitle = "From lab to field, it's development that will change everything.",
+  imageUrl = 'https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=1920&q=60',
+} = Astro.props as {
+  title?: string;
+  subtitle?: string;
+  imageUrl?: string;
+};
+---
+<section class="hero" style={`--hero-image: url('${imageUrl}')`}>
+  <div class="hero-overlay" />
+  <div class="hero-content">
+    <h1 class="hero-title">{title}</h1>
+    {subtitle && (<p class="hero-subtitle">{subtitle}</p>)}
+    <div class="scroll-indicator" aria-hidden="true">SCROLL TO DISCOVER</div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    background-image: var(--hero-image);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.75) 70%),
+                linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
+  }
+  .hero-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 1.25rem;
+  }
+  .hero-title {
+    color: #fff;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1.05;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.35));
+  }
+  .hero-subtitle {
+    margin-top: 0.75rem;
+    color: rgba(255,255,255,0.85);
+    max-width: 900px;
+  }
+  .scroll-indicator {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.2em;
+    font-size: 0.8rem;
+  }
+</style>

@@ -2,9 +2,15 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { products } from "../data/products";
 import ProductCard from "../components/ProductCard.astro";
+import HomeHero from "../components/HomeHero.astro";
 ---
-<BaseLayout title="Astro Shop">
-  <h1>Featured Products</h1>
+<BaseLayout title="Astro Shop" hideHeader={true}>
+  <HomeHero
+    title="CORN. REVOLUTIONIZED."
+    subtitle="From lab to field, it's seed development that will change farming."
+    imageUrl="https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=1920&q=60"
+  />
+  <h1 style="margin-top:1.5rem">Featured Products</h1>
   <p class="muted">A minimal Astro e-commerce demo with a local cart.</p>
   <div class="card" style="margin:1rem 0">
     <div class="content" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end">
